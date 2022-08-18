@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package servicebase;
+
+message DMatrix {
+    int32 rows = 1;
+    int32 columns = 2;
+    repeated double array = 3;
+}
+
+message ComputeItem {
+    DMatrix x = 1;
+    DMatrix y = 2;
+    string module = 3;
+    string operation = 4;
+    int32 uid = 5;
+}
+
+message AvailableCompute {
+    string module = 1;
+    string operation = 2;
+}
+
+message GetAvailableResponse {
+    repeated AvailableCompute available = 1;
+}
+
+message Results {
+    string module = 1;
+    string operation = 2;
+    DMatrix result = 3;
+}
+
+service ServiceBase {
+    rpc GetAvailable(google.protobuf.Empty) returns(GetAvailableResponse);
+    rpc SubmitCompute(ComputeItem) returns (Results);
+}
