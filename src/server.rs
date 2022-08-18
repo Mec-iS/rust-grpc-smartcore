@@ -10,7 +10,7 @@ use servicebase::{ComputeItem, DMatrix, AvailableCompute, GetAvailableResponse, 
 
 use smartcore::linalg::naive::dense_matrix::DenseMatrix;
 use smartcore::linear::linear_regression::{LinearRegression, LinearRegressionParameters, LinearRegressionSolverName};
-use smartcore::error::Failed;
+use std::panic;
 
 #[derive(Debug, Default)]
 pub struct SmartcoreService {
@@ -54,18 +54,26 @@ impl ServiceBase for SmartcoreService {
         let results;
         match &module[..] {
             "linear::linear_regression::LinearRegression" => {
-                results = 
+                let _results = panic::catch_unwind(|| {
                     LinearRegression::fit(
                         &_X,
                         &y,
                         LinearRegressionParameters {
                             solver: LinearRegressionSolverName::QR,
                         },
-                    ).and_then(|lr| lr.predict(&_X)).unwrap();
-                },
+                    ).and_then(|lr| lr.predict(&_X))
+                });
+
+                match _results {
+                    Ok(res) => {results = res },
+                    Err(_) => { return Err(Status::invalid_argument(
+                        format!("Check Smartcore doc for instructions how to use method {module}")
+                    ));}
+                };
+            },
             _ => { return Err(Status::invalid_argument(
-                    format!("Module or operation not available")
-                ));}
+                    format!("Module or operation not available")));
+            }
         };
         
         let message = Results {
@@ -73,8 +81,8 @@ impl ServiceBase for SmartcoreService {
             operation: payload.operation.into(),
             result: Some(DMatrix {
                 rows: 1,
-                columns: 5,
-                array: results
+                columns: x_cols,
+                array: results.unwrap()
             }),
         };
 
@@ -84,6 +92,10 @@ impl ServiceBase for SmartcoreService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    panic::set_hook(Box::new(|_info| {
+        println!("{:?}", _info);
+    }));
+
     let addr = "0.0.0.0:5005".parse().unwrap();
     let service = SmartcoreService::default();
 
