@@ -10,6 +10,7 @@ use servicebase::{ComputeItem, DMatrix, AvailableCompute, GetAvailableResponse, 
 
 use smartcore::linalg::naive::dense_matrix::DenseMatrix;
 use smartcore::linear::linear_regression::{LinearRegression, LinearRegressionParameters, LinearRegressionSolverName};
+use smartcore::error::Failed;
 
 #[derive(Debug, Default)]
 pub struct SmartcoreService {
@@ -52,20 +53,20 @@ impl ServiceBase for SmartcoreService {
     
         let results;
         match &module[..] {
-            "linear::linear_regression::LinearRegression" => 
-                 results = Some(
+            "linear::linear_regression::LinearRegression" => {
+                results = 
                     LinearRegression::fit(
                         &_X,
                         &y,
                         LinearRegressionParameters {
                             solver: LinearRegressionSolverName::QR,
                         },
-                    ).and_then(|lr| lr.predict(&_X))
-                    .unwrap()),
-            _ => results = None,
+                    ).and_then(|lr| lr.predict(&_X)).unwrap();
+                },
+            _ => { return Err(Status::invalid_argument(
+                    format!("Module or operation not available")
+                ));}
         };
-
-        let results = results.unwrap();
         
         let message = Results {
             module: module,
