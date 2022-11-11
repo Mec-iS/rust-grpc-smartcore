@@ -8,7 +8,7 @@ use tonic::{transport::Server, Request, Response, Status};
 use servicebase::service_base_server::{ServiceBaseServer, ServiceBase};
 use servicebase::{ComputeItem, DMatrix, AvailableCompute, GetAvailableResponse, Results};
 
-use smartcore::linalg::naive::dense_matrix::DenseMatrix;
+use smartcore::linalg::basic::matrix::DenseMatrix;
 use smartcore::linear::linear_regression::{LinearRegression, LinearRegressionParameters, LinearRegressionSolverName};
 use std::panic;
 
@@ -45,10 +45,11 @@ impl ServiceBase for SmartcoreService {
         let x: Vec<f64> = dmatrix_x.array.into();
         let y: Vec<f64> = payload.y.unwrap().array.into();
         
-        let _X = DenseMatrix::from_vec(
+        let X = DenseMatrix::new(
             x_rows as usize,
             x_cols as usize,
-            &x
+            x,
+            true
         );
     
         let results;
@@ -56,12 +57,13 @@ impl ServiceBase for SmartcoreService {
             "linear::linear_regression::LinearRegression" => {
                 let _results = panic::catch_unwind(|| {
                     LinearRegression::fit(
-                        &_X,
+                        &X,
                         &y,
                         LinearRegressionParameters {
                             solver: LinearRegressionSolverName::QR,
                         },
-                    ).and_then(|lr| lr.predict(&_X))
+                    )
+                    .and_then(|lr| lr.predict(&X))
                 });
 
                 match _results {
